@@ -43,6 +43,44 @@ const userCtrl = {
             return res.status(500).json({ msg: err.message });
         }
     },
+
+    login: async (req, res) => {
+        try {
+            const { email, password } = req.body;
+            const user = await Users.findOne({ email });
+            if (!user)
+                return res.status(400).json({ mgs: "User does not exit" });
+
+            const isMatch = await bcrypt.compare(password, user.password);
+
+            if (!isMatch)
+                return res.status(400).json({ mgs: "Incorrect password!" });
+
+            //if login success, create access token and refresh token.
+            const accesstoken = createAccessToken({ id: user._id });
+            const refreshtoken = createRefreshToken({ id: user._id });
+
+            res.cookie("refreshtoken", refreshtoken, {
+                httpOnly: true,
+                path: "/user/refresh_token",
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
+            });
+
+            res.json({ accesstoken });
+        } catch (error) {
+            return res.status(500).json({ mgs: err.message });
+        }
+    },
+
+    logout: async (req, res) => {
+        try {
+            res.clearCookie("refreshtoken", { path: "/user/refresh_token" });
+            return res.json({ mgs: "Logged out" });
+        } catch (error) {
+            return res.status(500).json({ mgs: err.message });
+        }
+    },
+
     refreshToken: (req, res) => {
         try {
             const rf_token = req.cookies.refreshtoken;
@@ -62,7 +100,7 @@ const userCtrl = {
 
                     const accesstoken = createAccessToken({ id: user.id });
 
-                    res.json({user,  accesstoken });
+                    res.json({ user, accesstoken });
                 }
             );
             // res.json({rf_token})
@@ -70,13 +108,27 @@ const userCtrl = {
             return res.status(500).json({ msg: err.message });
         }
     },
+
+    getUser: async (req, res) => {
+        try {
+            const user = await Users.findById(req.user.id).select("-password")
+            if(!user) return res.status(400).json({mgs: "User does not exits"})
+            res.json(user)
+        } catch (err) {
+            return res.status(500).json({ msg: err.message });
+        }
+    }
 };
 
-const createAccessToken = (user) =>{
-    return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '11m'})
-}
-const createRefreshToken = (user) =>{
-    return jwt.sign(user, process.env.REFRESH_TOKEN_SECRET, {expiresIn: '7d'})
-}
+const createAccessToken = (user) => {
+    return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "11m",
+    });
+};
+const createRefreshToken = (user) => {
+    return jwt.sign(user, process.env.REFRESH_TOKEN_SECRET, {
+        expiresIn: "7d",
+    });
+};
 
 module.exports = userCtrl;
