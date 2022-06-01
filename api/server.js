@@ -33,6 +33,7 @@ mongoose.connect(
 );
 
 app.use('/user', require('./routers/userRouter'))
+app.use('/api', require('./routers/categoryRouter'))
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
