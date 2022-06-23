@@ -1,11 +1,74 @@
 const Products = require("../models/productModel");
 
+//filters, sorting, paginating
+class APIFeatures {
+    constructor(query, queryString) {
+        this.query = query;
+        this.queryString = queryString;
+    }
+
+    filtering() {
+        const queryObj = { ...this.queryString }; //queryString = req.query
+        // console.log({Before: queryObj});
+
+        const excludedFields = ["page", "sort", "limit"];  //filters theo page, limit, sort, cacs kieu con da dieu
+        excludedFields.forEach((el) => delete queryObj[el]);
+        // console.log({after: queryObj});
+
+        let queryStr = JSON.stringify(queryObj);
+        queryStr = queryStr.replace(
+            /\b(gte|gt|lt|lte|regex)\b/g,
+            (match) => "$" + match
+        );
+        // console.log({queryStr});g
+
+        //    gte = greater than or equal
+        //    lte = lesser than or equal
+        //    lt = lesser than
+        //    gt = greater than
+        this.query.find(JSON.parse(queryStr));
+
+        return this;
+    }
+
+    sorting() {
+        if (this.queryString.sort) {
+            const sortBy = this.queryString.sort.split(",").join(" ");
+            this.query = this.query.sort(sortBy)  //sort tu nho den lon
+            // console.log(sortBy);
+        }
+        else{
+            this.query = this.query.sort('-createdAt') //sort tu lon ve nho
+        }
+
+        return this;
+    }
+    paginating() {
+        const page = this.queryString.page * 1 || 1
+        const limit = this.queryString.limit * 1 || 9  //toi da 9 products tren mot page
+        const skip = (page - 1) * limit;
+        this.query = this.query.skip(skip).limit(limit)
+        return this;
+    }
+}
+
+//crud products
 const productCtrl = {
     getProduct: async (req, res) => {
         try {
             // res.json("tesst")
-            const products = await Products.find();
-            res.json(products);
+            const features = new APIFeatures(Products.find(), req.query)
+                .filtering()
+                .sorting()
+                .paginating();
+            const products = await features.query;
+            // console.log(req.query);
+
+            res.json({
+                status: "success",
+                results: products.length,
+                products: products,
+            });
         } catch (error) {
             return res.status(500).json({ mgs: error.message });
         }
@@ -40,8 +103,8 @@ const productCtrl = {
                 category,
             });
 
-            await newProduct.save()
-            res.json({mgs: "Created a product"})
+            await newProduct.save();
+            res.json({ mgs: "Created a product" });
         } catch (error) {
             return res.status(500).json({ mgs: error.message });
         }
@@ -49,27 +112,37 @@ const productCtrl = {
 
     deleteProduct: async (req, res) => {
         try {
-            await Products.findByIdAndDelete(req.params.id)
-            res.json({mgs: "Deleted a product"})
+            await Products.findByIdAndDelete(req.params.id);
+            res.json({ mgs: "Deleted a product" });
         } catch (error) {
             return res.status(500).json({ mgs: error.message });
         }
     },
 
-    updateProduct: async (req, res) =>{
+    updateProduct: async (req, res) => {
         try {
-            const {title, price, description, content, images, category} = req.body;
-            if(!images) return res.status(400).json({msg: "No image upload"})
+            const { title, price, description, content, images, category } =
+                req.body;
+            if (!images)
+                return res.status(400).json({ msg: "No image upload" });
 
-            await Products.findOneAndUpdate({_id: req.params.id}, {
-                title: title.toLowerCase(), price, description, content, images, category
-            })
+            await Products.findOneAndUpdate(
+                { _id: req.params.id },
+                {
+                    title: title.toLowerCase(),
+                    price,
+                    description,
+                    content,
+                    images,
+                    category,
+                }
+            );
 
-            res.json({msg: "Updated a Product"})
+            res.json({ msg: "Updated a Product" });
         } catch (err) {
-            return res.status(500).json({msg: err.message})
+            return res.status(500).json({ msg: err.message });
         }
-    }
+    },
 };
 
 module.exports = productCtrl;
