@@ -9,4 +9,11 @@
 
 
 /*---------Detail Product--------*/
-@import './components/mainpages/detailProduct/detailProduct'
+@import './components/mainpages/detailProduct/detailProduct';
+
+// Loading
+@import './components/mainpages/utils/loading/loading';
+
+
+//login 
+@import './components/mainpages/auth/login'
