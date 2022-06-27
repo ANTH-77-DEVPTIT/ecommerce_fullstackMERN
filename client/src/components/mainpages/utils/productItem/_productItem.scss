@@ -45,7 +45,7 @@
 
     .row__btn {
         width: 100%;
-        margin-top: 10px;
+        // margin-top: 10px;
         display: flex;
         justify-content: space-between;
 
@@ -68,5 +68,11 @@
             background-color: teal;
             margin-left: 5px;
         }
+    }
+
+    input {
+        position: absolute;
+        width: 25px;
+        height: 25px;
     }
 }
